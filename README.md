@@ -2,7 +2,7 @@
 <p align="center"><i> Neste repositório serão armazenadas as atividades avaliativas propostas na disciplina de Projetos de Algoritmos II. </i></p>
 
 ## Questões 📝
-- [Questão 01]() - **Árvore AVL**  (*Inserção, Remoção, Pesquisa*)
+- [Questão 01](https://github.com/nathil/Projetos-de-Algoritmos-II/blob/main/Questões/questao01.c) - **Árvore AVL**  (*Inserção, Remoção, Pesquisa*)
 - [Questão 02]() - **Árvore Rubro-Negra**  (*Inserção, Remoção, Pesquisa*)
 
 
