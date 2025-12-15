@@ -3,7 +3,7 @@
 
 ## Questões 📝
 - [Questão 01](https://github.com/nathil/Projetos-de-Algoritmos-II/blob/main/Questões/questao01.c) - **Árvore AVL**  (*Inserção, Remoção, Pesquisa*)
-- [Questão 02]() - **Árvore Rubro-Negra**  (*Inserção, Remoção, Pesquisa*)
+- [Questão 02](https://github.com/nathil/Projetos-de-Algoritmos-II/blob/main/Questões/questao02.c) - **Árvore Rubro-Negra**  (*Inserção, Remoção, Pesquisa*)
 
 
 <h2> Ferramentas 🛠️</h2> 
