@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* Alunos:  
+Murilo Henrique Conde da Luz 
+Nathielly Neves de Castro */
+
 
  /* funções essenciais */
   
