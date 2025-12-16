@@ -36,7 +36,7 @@ int maior(int subArv1, int subArv2){
     return (subArv1 > subArv2) ? subArv1:subArv2; 
 }
 
-int alturaNo(No *no){
+int alturaNo(const No *no){
     /*Retorna o valor da altura de um nó*/
     if(no == NULL){
         return -1; 
