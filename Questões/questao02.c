@@ -54,8 +54,10 @@ No* rotacaoEsquerda(No *p) {
 
     // Mudança de pai da subarvore t2, para realização da rotação
     No *t2 = u->esquerdo;
-    t2->pai = p;
     p->direito = t2;
+    if (t2) {
+        t2->pai = p;
+    }
 
     // Mudando raiz de p para u, finalizando a rotação
     u->pai = p->pai;
@@ -81,9 +83,12 @@ No* rotacaoDireita(No *p) {
     No *u = p->esquerdo;
 
     // Mudança de pai da subarvore t2, para realização da rotação
-    No *t2 = u->esquerdo;
-    t2->pai = p;
+    No *t2 = u->direito;
     p->esquerdo = t2;
+    if (t2) {
+        t2->pai = p;
+    }
+
 
     // Mudando raiz de p para u, finalizando a rotação
     u->pai = p->pai;
@@ -153,43 +158,55 @@ No* inserirNo(No* raiz, No* novoNo) {
     return raiz;
 }
 
+/**
+ * Ajusta a árvore rubro-negra onde um nó foi inserido
+ * @param raiz Origem da árvore onde o nó será ajustado
+ * @param no Nó onde será iniciado os ajustes
+ * @return Raiz da árvore ajustada seguindo as regras de inserção de árvores rubro-negra
+ */
 No* insercaoAjuste(No *raiz, No *no) {
+    // Caso o nó não exista, mostra um erro e retorna a árvore
     if (!no) {
         printf("ERRO: nó não definido.\n");
-    } else if (!no->pai) {
+    }
+    // Caso o nó inserido seja a raiz, transforme o nó de vermelho para preto
+    else if (!no->pai) {
         no->cor = PRETO;
-    } else if (no->pai->cor == VERMELHO) {
+    }
+    // Casos onde o pai é vermelho
+    else if (no->pai->cor == VERMELHO) {
         No* pai = no->pai;
         No* avo = pai->pai;
         No* tio = avo->esquerdo == pai ? avo->direito : avo->esquerdo;
         No* bisavo = avo->pai;
 
+        // Caso o pai e o tio forem vermelhos, troca a cor do pai, tio e avô, e verifica se o avô precisa de ajuste
         if (tio != NULL && tio->cor == VERMELHO) {
             pai->cor = PRETO;
             avo->cor = VERMELHO;
             tio->cor = PRETO;
 
             raiz = insercaoAjuste(raiz, avo);
-        } else {
+        }
+
+        // Caso o pai seja vermelho, e o tio seja preto, aplicamos uma das rotações e mudamos a cor no novo avô e do irmão do nó inserido
+        else {
             No *novoAvo = NULL;
             if (avo->esquerdo == pai && pai->esquerdo == no) {
                 novoAvo = rotacaoDireita(avo);
-                pai->cor = PRETO;
-                avo->cor = VERMELHO;
             } else if (avo->direito == pai && pai->direito == no) {
                 novoAvo = rotacaoEsquerda(avo);
-                pai->cor = PRETO;
-                avo->cor = VERMELHO;
             } else if (avo->esquerdo == pai && pai->direito == no) {
                 novoAvo = rotacaoDuplaDireita(avo);
-                no->cor = PRETO;
-                avo->cor = VERMELHO;
             } else {
-                no->cor = PRETO;
-                avo->cor = VERMELHO;
                 novoAvo = rotacaoDuplaEsquerda(avo);
             }
 
+            novoAvo->cor = PRETO;
+            avo->cor = VERMELHO;
+
+            // Caso o avô seja a raiz, retorna o novo avô, senão, apenas modificamos o filho do avo
+            novoAvo->pai = bisavo;
             if (bisavo == NULL) {
                 raiz = novoAvo;
             } else if (bisavo->esquerdo == avo) {
@@ -203,9 +220,20 @@ No* insercaoAjuste(No *raiz, No *no) {
     return raiz;
 }
 
+/**
+ * Insere um valor na árvore Rubro-Negra
+ * @param raiz A raiz da árvore onde será inserido o valor
+ * @param valor Valor que será inserido na árvore
+ * @return Raiz da árvore com o valor inserido
+ */
 No* inserirNoRN(No *raiz, const int valor) {
+    // Para inserir o valor, criamos um nó vermelho
     No* no = novoNo(valor);
+
+    // O inserimos na árvore utilizando os critérios de uma árvore binária de busca
     raiz = inserirNo(raiz, no);
+
+    // E ajustamos o balanceamento utilizando os critérios da árvore rubro negra
     raiz = insercaoAjuste(raiz, no);
 
     return raiz;
@@ -228,7 +256,19 @@ No* pesquisaNo(No *raiz, const int valor) {
     return pesquisaNo(valor < raiz->valor ? raiz->esquerdo : raiz->direito, valor);
 }
 
+No* removeNo(No *raiz, No *no) {
+}
+
+No* removeNoRN(No *raiz, const int valor) {
+    No* no = pesquisaNo(raiz, valor);
+}
+
+/**
+ * Libera os recursos de uma árvore binária
+ * @param raiz Raiz da árvore que terá os seus nós liberados
+ */
 void freeArvore(No *raiz) {
+    // Para a liberação a árvore é percorrida de forma recusiva em pós-ordem, liberando as subarvores da esquerda e da direita antes de liberar o nó atual
     if (raiz == NULL) return;
 
     freeArvore(raiz->esquerdo);
@@ -252,6 +292,10 @@ int alturaNo(const No *raiz) {
     return (alturaDireita > alturaEsquerdo ? alturaDireita : alturaEsquerdo) + 1;
 }
 
+/**
+ * Imprime a árvore no terminal
+ * @param raiz Raiz da árvore que será impressa
+ */
 void imprimeArvore(No *raiz) {
     if (raiz == NULL) {
         printf("A árvore está vazia.\n");
@@ -269,7 +313,10 @@ void imprimeArvore(No *raiz) {
         const int itens_nivel = (int) pow(2, nivel);
         prox_nivel_arr = malloc(sizeof(No*) * itens_nivel * 2);
 
-        spaces(((int) pow(2, altura - (nivel + 1)) - 1) * UNIT); // Padding
+        const int startPad = ((int) pow(2, altura - (nivel + 1)) - 1) * 2;
+        for (int i = 0; i < startPad; i++) {
+            printf(" ");
+        }
 
         for (int i = 0; i < itens_nivel; i++) {
             const No* no = nivel_arr[i];
@@ -278,12 +325,15 @@ void imprimeArvore(No *raiz) {
                 if (no->cor) {
                     printf(TEXT_RED);
                 }
-                printf("%" XSTR(UNIT) "d" TEXT_RESET, no->valor);
+                printf("%2d" TEXT_RESET, no->valor);
             } else {
-                spaces(UNIT);
+                printf("  ");
             }
 
-            spaces(((int) pow(2, altura - nivel) - 1) * UNIT); // Padding
+            const int innerPad = ((int) pow(2, altura - nivel) - 1) * 2;
+            for (int j = 0; j < innerPad; j++) {
+                printf(" ");
+            }
 
             prox_nivel_arr[i * 2] = no ? no->esquerdo : NULL;
             prox_nivel_arr[i * 2 + 1] = no ? no->direito : NULL;
