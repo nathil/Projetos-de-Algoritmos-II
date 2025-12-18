@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <locale.h>
+#include <wchar.h>
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 #define TEXT_RED "\033[0;31m"
 #define TEXT_RESET "\033[0m"
@@ -32,7 +38,7 @@ No* novoNo(const int valor) {
         no->pai = NULL;
         no->cor = VERMELHO; // Todos os nós criados são inicialmente vermelhos
     } else {
-        printf("ERRO: não foi possível alocar memória para a criação de um novo nó.\n");
+        wprintf(L"ERRO: não foi possível alocar memória para a criação de um novo nó.\n");
     }
 
     return no;
@@ -45,7 +51,7 @@ No* novoNo(const int valor) {
  */
 No* rotacaoEsquerda(No *p) {
     if (p == NULL || p->direito == NULL) {
-        printf("ERRO: A árvore não cumpre os requisitos de uma rotação à esquerda.");
+        wprintf(L"ERRO: A árvore não cumpre os requisitos de uma rotação à esquerda.");
         return NULL;
     }
 
@@ -75,7 +81,7 @@ No* rotacaoEsquerda(No *p) {
  */
 No* rotacaoDireita(No *p) {
     if (p == NULL || p->esquerdo == NULL) {
-        printf("ERRO: A árvore não cumpre os requisitos de uma rotação à direita.");
+        wprintf(L"ERRO: A árvore não cumpre os requisitos de uma rotação à direita.");
         return NULL;
     }
 
@@ -167,7 +173,7 @@ No* inserirNo(No* raiz, No* novoNo) {
 No* insercaoAjuste(No *raiz, No *no) {
     // Caso o nó não exista, mostra um erro e retorna a árvore
     if (!no) {
-        printf("ERRO: nó não definido.\n");
+        wprintf(L"ERRO: nó não definido.\n");
     }
     // Caso o nó inserido seja a raiz, transforme o nó de vermelho para preto
     else if (!no->pai) {
@@ -298,7 +304,7 @@ int alturaNo(const No *raiz) {
  */
 void imprimeArvore(No *raiz) {
     if (raiz == NULL) {
-        printf("A árvore está vazia.\n");
+        wprintf(L"A árvore está vazia.\n");
         return;
     }
 
@@ -311,35 +317,71 @@ void imprimeArvore(No *raiz) {
 
     for (int nivel = 0; nivel < altura; nivel++) {
         const int itens_nivel = (int) pow(2, nivel);
-        prox_nivel_arr = malloc(sizeof(No*) * itens_nivel * 2);
+        prox_nivel_arr = malloc(sizeof(No*) * itens_nivel * 3);
 
-        const int startPad = ((int) pow(2, altura - (nivel + 1)) - 1) * 2;
-        for (int i = 0; i < startPad; i++) {
-            printf(" ");
+        const int startPad = ((int) pow(2, altura - (nivel + 2)) - 1) * 3;
+        for (int i = 0; i < startPad + 1; i++) {
+            wprintf(L" ");
         }
 
         for (int i = 0; i < itens_nivel; i++) {
             const No* no = nivel_arr[i];
 
             if (no) {
-                if (no->cor) {
-                    printf(TEXT_RED);
+                if (no->esquerdo) {
+                    wprintf(L"┌");
+                    for (int j = 0; j < startPad + 1; j++) {
+                        wprintf(L"─");
+                    }
+                } else {
+                    for (int j = 0; j < startPad + 2; j++) {
+                        wprintf(L" ");
+                    }
                 }
-                printf("%2d" TEXT_RESET, no->valor);
+
+                if (no->cor) {
+                    wprintf(L"" TEXT_RED);
+                }
+
+                const int digits = (no->valor == 0) ? 1 : floor(log10(abs(no->valor))) + 1;
+                wprintf(L"%d ", digits);
+
+                // for (int j = 0; j < front; j++) {
+                //     wprintf(L" ");
+                // }
+
+                if (no->cor) {
+                    wprintf(L"" TEXT_RED);
+                }
+                wprintf(L"%d" TEXT_RESET, no->valor);
+                //
+                // for (int j = 0; j < back; j++) {
+                //     wprintf(L" ");
+                // }
+
+                if (no->direito) {
+                    for (int j = 0; j < startPad + 1; j++) {
+                        wprintf(L"─");
+                    }
+                    wprintf(L"┐");
+                } else {
+                    for (int j = 0; j < startPad + 2; j++) {
+                        wprintf(L" ");
+                    }
+                }
             } else {
-                printf("  ");
+                for (int j = 0; j < 2 * startPad + 3; j++) {
+                    wprintf(L"  ");
+                }
             }
 
-            const int innerPad = ((int) pow(2, altura - nivel) - 1) * 2;
-            for (int j = 0; j < innerPad; j++) {
-                printf(" ");
-            }
+            wprintf(L"   ");
 
             prox_nivel_arr[i * 2] = no ? no->esquerdo : NULL;
             prox_nivel_arr[i * 2 + 1] = no ? no->direito : NULL;
         }
 
-        printf("\n");
+        wprintf(L"\n");
         free(nivel_arr);
         nivel_arr = prox_nivel_arr;
         prox_nivel_arr = NULL;
@@ -348,19 +390,69 @@ void imprimeArvore(No *raiz) {
     free(nivel_arr);
 }
 
+void preOrdem(const No *raiz){
+    wprintf(L"%d ", raiz->valor);
+
+    if(raiz->esquerdo != NULL){
+        preOrdem(raiz->esquerdo);
+    }
+    if(raiz->direito != NULL){
+        preOrdem(raiz->direito);
+    }
+}
+
 int main() {
-    No* raiz = NULL;
+    // Set locale to support wide characters
+    setlocale(LC_ALL, "");
 
-    raiz = inserirNoRN(raiz, 4);
-    raiz = inserirNoRN(raiz, 1);
-    raiz = inserirNoRN(raiz, 6);
-    raiz = inserirNoRN(raiz, 0);
-    raiz = inserirNoRN(raiz, -1);
-    raiz = inserirNoRN(raiz, 3);
-    raiz = inserirNoRN(raiz, 2);
-    raiz = inserirNoRN(raiz, 5);
+#ifdef _WIN32
+    // For Windows, specifically set the console output mode
+    // _O_U16TEXT might need a #define _O_U16TEXT 0x20000 on some older compilers
+    _setmode(_fileno(stdout), _O_U16TEXT);
+#else
+    // For POSIX systems, fwide(stdout, 1) can set the stream to wide orientation
+    fwide(stdout, 1);
+#endif
 
-    imprimeArvore(raiz);
+    int escolha, valor;
+    No *raiz = NULL;
+
+    do{
+        wprintf(L"\n0 - Sair\n1 - Inserir\n2 - Remover\n3 - Imprimir\n4 - Mostrar em Pre-Ordem\n");
+        wprintf(L"Escolha uma opção: ");
+        scanf("%d", &escolha);
+
+        switch (escolha){
+            case 0:
+                wprintf(L"Finalizando...");
+                break;
+
+            case 1:
+                wprintf(L"\nInforme o valor que deseja inserir:");
+                scanf("%d", &valor);
+                raiz = inserirNoRN(raiz, valor);
+                break;
+
+            case 2:
+                wprintf(L"\nInforme o valor que deseja remover:");
+                scanf("%d", &valor);
+                raiz = removeNoRN(raiz, valor);
+                break;
+
+            case 3:
+                imprimeArvore(raiz);
+                break;
+
+            case 4:
+                preOrdem(raiz);
+                break;
+
+            default:
+                wprintf(L"\nOpcao invalida!!!!");
+        }
+
+    }while (escolha != 0);
+
     freeArvore(raiz);
     return 0;
 }
