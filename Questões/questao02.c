@@ -309,156 +309,125 @@ void freeArvore(No *raiz) {
  * @return Altura da árvore
  */
 int alturaNo(const No *raiz) {
-    // Calcula a altura da subarvore da esquerda da raiz, caso a subarvore esteja vazia (NULL), sua altura é 0
-    const int alturaEsquerdo = raiz->esquerdo ? alturaNo(raiz->esquerdo) : 0;
+    // Se a árvore não tem nós, então a sua altura é 0
+    if (raiz == NULL) {
+        return 0;
+    }
 
-    // Calcula a altura da subarvore da esquerda da raiz, caso a subarvore esteja vazia (NULL), sua altura é 0
-    const int alturaDireita = raiz->direito ? alturaNo(raiz->direito) : 0;
+    // Calcula a altura da subarvore da esquerda da raiz
+    const int alturaEsquerdo = alturaNo(raiz->esquerdo);
+
+    // Calcula a altura da subarvore da esquerda da raiz
+    const int alturaDireita = alturaNo(raiz->direito);
 
     // A altura da árvore atual é a altura da sua maior subarvore + 1
     return (alturaDireita > alturaEsquerdo ? alturaDireita : alturaEsquerdo) + 1;
 }
 
-void imprimeArvoreCamadas(No **camada, const int altura) {
-    const int nos = 1 << (altura - 1); // 2^(altura-1)
-    const int padding = (1 << altura) - 1; // (2^altura) - 1
-    No **prox_camada = malloc(sizeof(camada) * 2);
+int comprimento(int numero) {
+    const int sinal = numero < 0;
+    int contador = 0;
 
-    for (int i = 0; i < nos; i++) {
-        const No *no = camada[i];
-
-        for (int p = 0; p < padding; p++) wprintf(L" ");
-
-        if (no) {
-            wprintf(no->cor == PRETO ? L"%d" : TEXT_RED "%d" TEXT_RESET, no->valor);
-            prox_camada[i*2] = no->esquerdo;
-            prox_camada[i*2 + 1] = no->direito;
-        } else {
-            wprintf(L" ");
-            prox_camada[i*2] = NULL;
-            prox_camada[i*2 + 1] = NULL;
+    if (numero == 0) {
+        contador = 1;
+    } else {
+        // Loop enquanto o número for diferente de zero
+        while (numero != 0) {
+            numero = numero / 10; // Remove o último dígito
+            contador++;           // Incrementa o contador
         }
+    }
 
-        for (int p = 0; p < padding; p++) wprintf(L" ");
-        wprintf(L" ");
+    return sinal + contador;
+}
+
+int maiorComprimento(const No *raiz) {
+    if (raiz == NULL) {
+        return 0;
+    }
+
+    const int compr = comprimento(raiz->valor);
+    const int comprEsq = maiorComprimento(raiz->esquerdo);
+    const int comprDir = maiorComprimento(raiz->direito);
+
+    return (compr > comprEsq) ? (compr > comprDir ? compr : comprDir) : (comprEsq > comprDir ? comprEsq : comprDir);
+}
+
+void center(const wchar_t *str, const int tam, const int total, const int ajustarEsq, const wchar_t *fillEsq, const wchar_t *fillDir) {
+    const double pad = (double) (total- tam) / 2.;
+
+    const int padEsq = (int) (ajustarEsq ? floor(pad) : ceil(pad));
+    const int padDir = (int) (ajustarEsq ? ceil(pad) : floor(pad));
+
+    for (int p = 0; p < padEsq; p++) wprintf(L"%ls", fillEsq);
+    wprintf(L"%ls", str);
+    for (int p = 0; p < padDir; p++) wprintf(L"%ls", fillDir);
+}
+
+void imprimeNo(const No *no, const int altura, const int compr, const int ajustarEsq) {
+    const int halfPad = (1 << (altura-1)) - 1;
+
+    for (int p = 0; p < halfPad * compr; p++) wprintf(L" ");
+    center(no && no->esquerdo ? L"┌" : L" ", 1, compr, 0, L" ", L"─");
+    for (int p = 0; p < halfPad * compr; p++) wprintf(no && no->esquerdo ? L"─" : L" ");
+
+    if (no) {
+        wchar_t wideBuffer[32];
+        swprintf(wideBuffer, sizeof(wideBuffer) / sizeof(wchar_t), no->cor == VERMELHO ? TEXT_RED L"%d" TEXT_RESET : L"%d", no->valor);
+
+        const int tam = comprimento(no->valor);
+        center(wideBuffer, tam, compr, ajustarEsq, no->esquerdo ? L"─" : L" ", no->direito ? L"─" : L" ");
+    } else {
+        for (int p = 0; p < compr; p++) wprintf(L" ");
+    }
+
+    for (int p = 0; p < halfPad * compr; p++) wprintf(no && no->direito ? L"─" : L" ");
+    center(no && no->direito ? L"┐" : L" ", 1, compr, 1, L"─", L" ");
+    for (int p = 0; p < halfPad * compr; p++) wprintf(L" ");
+}
+
+No** imprimeCamada(No **camada, const int n, const int altura, const int compr) {
+    if (!camada) {
+        wprintf(L"Erro, camada não alocada");
+        return camada;
+    }
+
+    No** prox_camada = malloc(sizeof(No*) * n * 2);
+
+    for (int i = 0; i < n; i++) {
+        const No* no = camada[i];
+
+        imprimeNo(no, altura, compr, i % 2);
+        for (int p = 0; p < compr; p++) wprintf(L" ");
+
+        prox_camada[i * 2] = no ? no->esquerdo : NULL;
+        prox_camada[i * 2 + 1] = no ? no->direito : NULL;
     }
 
     wprintf(L"\n");
     free(camada);
-
-    if (altura > 1) {
-        imprimeArvoreCamadas(prox_camada, altura-1);
-    } else {
-        free(prox_camada);
-    }
+    return prox_camada;
 }
 
-void imprimeArvore(No *raiz) {
+void imprimeArvore(No* raiz) {
     const int altura = alturaNo(raiz);
+    if (altura <= 0) {
+        wprintf(L"A árvore está vazia.\n");
+        return;
+    }
 
-    No **camada = malloc(sizeof(No*));
+    const int compr = maiorComprimento(raiz);
+    No** camada = malloc(sizeof(No*));
     camada[0] = raiz;
 
-    wprintf(L"Altura: %d\n", altura);
+    int n = 1;
 
-    imprimeArvoreCamadas(camada, altura);
+    for (int a = altura; a > 0; a--) {
+        camada = imprimeCamada(camada, n, a, compr);
+        n *= 2;
+    }
+    free(camada);
 }
-
-// /**
-//  * Imprime a árvore no terminal
-//  * @param raiz Raiz da árvore que será impressa
-//  */
-// void imprimeArvore(No *raiz) {
-//     if (raiz == NULL) {
-//         wprintf(L"A árvore está vazia.\n");
-//         return;
-//     }
-//
-//     const int altura = alturaNo(raiz);
-//
-//     No **nivel_arr = malloc(sizeof(No*));
-//     No **prox_nivel_arr = NULL;
-//
-//     nivel_arr[0] = raiz;
-//
-//     for (int nivel = 0; nivel < altura; nivel++) {
-//         const int itens_nivel = (int) pow(2, nivel);
-//         prox_nivel_arr = malloc(sizeof(No*) * itens_nivel * 3);
-//
-//         const int startPad = ((int) pow(2, altura - (nivel + 2)) - 1) * 3;
-//         for (int i = 0; i < startPad + 1; i++) {
-//             wprintf(L" ");
-//         }
-//
-//         for (int i = 0; i < itens_nivel; i++) {
-//             const No* no = nivel_arr[i];
-//
-//             if (no) {
-//                 if (no->esquerdo) {
-//                     wprintf(L"┌");
-//                     for (int j = 0; j < startPad + 1; j++) {
-//                         wprintf(L"─");
-//                     }
-//                 } else {
-//                     for (int j = 0; j < startPad + 2; j++) {
-//                         wprintf(L"e");
-//                     }
-//                 }
-//
-//                 if (no->cor) {
-//                     wprintf(L"" TEXT_RED);
-//                 }
-//
-//                 const int digits = (no->valor == 0) ? 1 : (int) floor(log10(abs(no->valor))) + 1;
-//                 const int front = (int) ceil((3. - digits) / 2.);
-//                 const int back = (3 - digits) / 2;
-//
-//                 for (int j = 0; j < front; j++) {
-//                     wprintf(L"f");
-//                 }
-//
-//                 if (no->cor) {
-//                     wprintf(TEXT_RED);
-//                 }
-//                 wprintf(L"%d" TEXT_RESET, no->valor);
-//
-//                 for (int j = 0; j < back; j++) {
-//                     wprintf(L"b");
-//                 }
-//
-//                 if (no->direito) {
-//                     for (int j = 0; j < startPad + 1; j++) {
-//                         wprintf(L"─");
-//                     }
-//                     wprintf(L"┐");
-//                 } else {
-//                     for (int j = 0; j < startPad + 2; j++) {
-//                         wprintf(L"d");
-//                     }
-//                 }
-//             } else {
-//                 for (int j = 0; j < 2 * startPad + 3; j++) {
-//                     wprintf(L"   ");
-//                 }
-//             }
-//
-//             const int middlePad = ((int) pow(2, altura - (nivel + 1)) - 1) * 3;
-//             for (int j = 0; j < middlePad + 1; j++) {
-//                 wprintf(L"m");
-//             }
-//
-//             prox_nivel_arr[i * 2] = no ? no->esquerdo : NULL;
-//             prox_nivel_arr[i * 2 + 1] = no ? no->direito : NULL;
-//         }
-//
-//         wprintf(L"\n");
-//         free(nivel_arr);
-//         nivel_arr = prox_nivel_arr;
-//         prox_nivel_arr = NULL;
-//     }
-//
-//     free(nivel_arr);
-// }
 
 void preOrdem(const No *raiz){
     wprintf(L"%d ", raiz->valor);
@@ -486,22 +455,11 @@ int main() {
 
     int escolha, valor;
     No *raiz = NULL;
-    raiz = inserirNoRN(raiz, 1);
-    raiz = inserirNoRN(raiz, 2);
-    raiz = inserirNoRN(raiz, 3);
-    raiz = inserirNoRN(raiz, 4);
-    raiz = inserirNoRN(raiz, 5);
 
-    imprimeArvore(raiz);
-
-    wprintf(L"%d", sucessor(raiz)->valor);
-
-    wprintf(L"\n\n\n\n");
-/*
     do{
         wprintf(L"\n0 - Sair\n1 - Inserir\n2 - Remover\n3 - Imprimir\n4 - Mostrar em Pre-Ordem\n");
         wprintf(L"Escolha uma opção: ");
-        scanf("%d", &escolha);
+        wscanf(L"%d", &escolha);
 
         switch (escolha){
             case 0:
@@ -509,14 +467,14 @@ int main() {
                 break;
 
             case 1:
-                wprintf(L"\nInforme o valor que deseja inserir:");
-                scanf("%d", &valor);
+                wprintf(L"\nInforme o valor que deseja inserir: ");
+                wscanf(L"%d", &valor);
                 raiz = inserirNoRN(raiz, valor);
                 break;
 
             case 2:
-                wprintf(L"\nInforme o valor que deseja remover:");
-                scanf("%d", &valor);
+                wprintf(L"\nInforme o valor que deseja remover: ");
+                wscanf(L"%d", &valor);
                 raiz = removeNoRN(raiz, valor);
                 break;
 
@@ -533,7 +491,7 @@ int main() {
         }
 
     }while (escolha != 0);
-*/
+
     freeArvore(raiz);
     return 0;
 }
