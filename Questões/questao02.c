@@ -249,46 +249,184 @@ No* inserirNoRN(No *raiz, const int valor) {
  * Busca um nó com valor correspondente na árvore
  * @param raiz Nó inicial da busca
  * @param valor Valor que será buscado na árvore
+ * @param exibirMensagem Indica se deve exibir mensagens durante a busca
  * @return O nó com o valor correspondente ou NULL, caso ele não esteja presente na árvore
  */
-No* pesquisaNo(No *raiz, const int valor) {
+No* pesquisaNo(No *raiz, const int valor, const int exibirMensagem) {
     // Caso base - valor não encontrado
     if (raiz == NULL) return NULL;
+
+    if (exibirMensagem) {
+        wprintf(L"Verificando nó com valor %d...\n", raiz->valor);
+    }
 
     // Caso base - valor encontrado
     if (raiz->valor == valor) return raiz;
 
     // Caso recursivo - continuar pesquisa para a direita ou esquerda, dependendo do valor do nó
-    return pesquisaNo(valor < raiz->valor ? raiz->esquerdo : raiz->direito, valor);
+    return pesquisaNo(valor < raiz->valor ? raiz->esquerdo : raiz->direito, valor, exibirMensagem);
 }
 
-No* sucessor(No *no) {
-    if (!no) {
-        wprintf(L"O nó não existe");
-        return NULL;
-    }
-
-    if (!no->esquerdo && !no->direito) {
-        return no;
-    }
-
-    if (no->esquerdo && !no->direito) {
-        return no->esquerdo;
-    }
-
-    no = no->direito;
-    while (no->esquerdo != NULL) {
+/**
+ * Retorna o menor nó de uma subárvore
+ * @param no Raiz da subárvore
+ * @return Nó com o menor valor
+ */
+No* minimo(No *no) {
+    while (no && no->esquerdo) {
         no = no->esquerdo;
     }
     return no;
 }
 
-No* removeNo(No *raiz, No *no) {
+/**
+ * Substitui um nó por outro na árvore
+ * @param raiz Raiz da árvore
+ * @param u Nó que será substituído
+ * @param v Nó substituto
+ * @return Nova raiz da árvore
+ */
+No* transplantar(No *raiz, No *u, No *v) {
+    if (u->pai == NULL) {
+        raiz = v;
+    } else if (u == u->pai->esquerdo) {
+        u->pai->esquerdo = v;
+    } else {
+        u->pai->direito = v;
+    }
+
+    if (v != NULL) {
+        v->pai = u->pai;
+    }
+
+    return raiz;
 }
 
-No* removeNoRN(No *raiz, const int valor) {
-    No* no = pesquisaNo(raiz, valor);
+/**
+ * Ajusta a árvore rubro-negra após remoção
+ * @param raiz Raiz da árvore
+ * @param x Nó que pode violar as propriedades rubro-negras
+ * @return Raiz ajustada
+ */
+No* remocaoAjuste(No *raiz, No *x) {
+    while (x != raiz && (x == NULL || x->cor == PRETO)) {
+        No *pai = x ? x->pai : NULL;
+
+        if (x == pai->esquerdo) {
+            No *irmao = pai->direito;
+
+            if (irmao && irmao->cor == VERMELHO) {
+                irmao->cor = PRETO;
+                pai->cor = VERMELHO;
+                raiz = rotacaoEsquerda(pai);
+                irmao = pai->direito;
+            }
+
+            if ((!irmao->esquerdo || irmao->esquerdo->cor == PRETO) &&
+                (!irmao->direito || irmao->direito->cor == PRETO)) {
+                irmao->cor = VERMELHO;
+                x = pai;
+            } else {
+                if (!irmao->direito || irmao->direito->cor == PRETO) {
+                    if (irmao->esquerdo) irmao->esquerdo->cor = PRETO;
+                    irmao->cor = VERMELHO;
+                    raiz = rotacaoDireita(irmao);
+                    irmao = pai->direito;
+                }
+
+                irmao->cor = pai->cor;
+                pai->cor = PRETO;
+                if (irmao->direito) irmao->direito->cor = PRETO;
+                raiz = rotacaoEsquerda(pai);
+                x = raiz;
+            }
+        } else {
+            No *irmao = pai->esquerdo;
+
+            if (irmao && irmao->cor == VERMELHO) {
+                irmao->cor = PRETO;
+                pai->cor = VERMELHO;
+                raiz = rotacaoDireita(pai);
+                irmao = pai->esquerdo;
+            }
+
+            if ((!irmao->direito || irmao->direito->cor == PRETO) &&
+                (!irmao->esquerdo || irmao->esquerdo->cor == PRETO)) {
+                irmao->cor = VERMELHO;
+                x = pai;
+            } else {
+                if (!irmao->esquerdo || irmao->esquerdo->cor == PRETO) {
+                    if (irmao->direito) irmao->direito->cor = PRETO;
+                    irmao->cor = VERMELHO;
+                    raiz = rotacaoEsquerda(irmao);
+                    irmao = pai->esquerdo;
+                }
+
+                irmao->cor = pai->cor;
+                pai->cor = PRETO;
+                if (irmao->esquerdo) irmao->esquerdo->cor = PRETO;
+                raiz = rotacaoDireita(pai);
+                x = raiz;
+            }
+        }
+    }
+
+    if (x) x->cor = PRETO;
+    return raiz;
 }
+
+/**
+ * Remove um nó da árvore Rubro-Negra
+ * @param raiz Raiz da árvore
+ * @param valor Valor a ser removido
+ * @return Nova raiz da árvore
+ */
+No* removeNoRN(No *raiz, const int valor) {
+    No *z = pesquisaNo(raiz, valor, 0);
+
+    if (z == NULL) {
+        wprintf(L"Valor não encontrado na árvore.\n");
+        return raiz;
+    }
+
+    No *y = z;
+    No *x = NULL;
+    short corOriginal = y->cor;
+
+    if (z->esquerdo == NULL) {
+        x = z->direito;
+        raiz = transplantar(raiz, z, z->direito);
+    } else if (z->direito == NULL) {
+        x = z->esquerdo;
+        raiz = transplantar(raiz, z, z->esquerdo);
+    } else {
+        y = minimo(z->direito);
+        corOriginal = y->cor;
+        x = y->direito;
+
+        if (y->pai == z) {
+            if (x) x->pai = y;
+        } else {
+            raiz = transplantar(raiz, y, y->direito);
+            y->direito = z->direito;
+            y->direito->pai = y;
+        }
+
+        raiz = transplantar(raiz, z, y);
+        y->esquerdo = z->esquerdo;
+        y->esquerdo->pai = y;
+        y->cor = z->cor;
+    }
+
+    free(z);
+
+    if (corOriginal == PRETO) {
+        raiz = remocaoAjuste(raiz, x);
+    }
+
+    return raiz;
+}
+
 
 /**
  * Libera os recursos de uma árvore binária
@@ -457,7 +595,7 @@ int main() {
     No *raiz = NULL;
 
     do{
-        wprintf(L"\n0 - Sair\n1 - Inserir\n2 - Remover\n3 - Imprimir\n4 - Mostrar em Pre-Ordem\n");
+        wprintf(L"\n0 - Sair\n1 - Inserir\n2 - Remover\n3 - Pesquisar\n4 - Imprimir\n5 - Pré-ordem\n");
         wprintf(L"Escolha uma opção: ");
         wscanf(L"%d", &escolha);
 
@@ -479,10 +617,21 @@ int main() {
                 break;
 
             case 3:
-                imprimeArvore(raiz);
+                wprintf(L"\nInforme o valor que deseja pesquisar: ");
+                wscanf(L"%d", &valor);
+                const No* resultado = pesquisaNo(raiz, valor, 1);
+                if (resultado) {
+                    wprintf(L"Valor %d encontrado na árvore.\n", valor);
+                } else {
+                    wprintf(L"Valor %d não encontrado na árvore.\n", valor);
+                }
                 break;
 
             case 4:
+                imprimeArvore(raiz);
+                break;
+
+            case 5:
                 preOrdem(raiz);
                 break;
 
